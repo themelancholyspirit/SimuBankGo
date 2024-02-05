@@ -53,3 +53,8 @@ type LoginResponse struct {
 func (a *Account) IsValidPassword(pw string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(a.EncryptedPassword), []byte(pw)) == nil
 }
+
+type TransferMoneyRequest struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}

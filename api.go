@@ -28,8 +28,38 @@ func (s *APIServer) Run() {
 	router.HandleFunc("/account", makeHTTPHandler(s.handleAccount))
 	router.HandleFunc("/account/{id}", jwtMiddleware(makeHTTPHandler(s.handleAccountById)))
 	router.HandleFunc("/login", makeHTTPHandler(s.handleLogin))
+	router.HandleFunc("/transfer", makeHTTPHandler(s.handleTransfer))
 
 	http.ListenAndServe(s.listenAddr, router)
+}
+
+func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error {
+	if r.Method != "POST" {
+		return fmt.Errorf("Method: %s not allowed.", r.Method)
+	}
+
+	transferReq := new(TransferMoneyRequest)
+
+	if err := json.NewDecoder(r.Body).Decode(transferReq); err != nil {
+		return err
+	}
+
+	defer r.Body.Close()
+
+	if !isValidEmail(transferReq.To) {
+		return fmt.Errorf("Invalid email provided.")
+	}
+
+	acc, err := s.store.GetAccountByEmail(transferReq.To)
+
+	if err != nil {
+		return fmt.Errorf("User with email: %s does not exist", transferReq.To)
+	}
+
+	return writeJSON(w, http.StatusOK, map[string]string{
+		"user found": acc.Email,
+	})
+
 }
 
 func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
@@ -64,6 +94,8 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	if err := json.NewDecoder(r.Body).Decode(loginReq); err != nil {
 		return err
 	}
+
+	defer r.Body.Close()
 
 	if !IsValidLoginRequest(loginReq) {
 		return fmt.Errorf("Invalid request.")
