@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -51,10 +52,30 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 	}
 
 	acc, err := s.store.GetAccountByEmail(transferReq.To)
+	currentUserEmail, ok := r.Context().Value("userEmail").(string)
+
+	if !ok {
+		return writeJSON(w, http.StatusUnauthorized, map[string]string{
+			"error": "Authorization needed.",
+		})
+	}
+
+	currUserAcc, err := s.store.GetAccountByEmail(currentUserEmail)
+
+	if err != nil {
+		return writeJSON(w, http.StatusUnauthorized, UnauthorizedResponse{Error: err.Error()})
+	}
 
 	if err != nil {
 		return fmt.Errorf("User with email: %s does not exist", transferReq.To)
 	}
+
+	if currUserAcc.Balance < int64(transferReq.Amount) {
+		return fmt.Errorf("insufficient funds: your current balance is %d", currUserAcc.Balance)
+	}
+
+	acc.Balance += int64(transferReq.Amount)
+	currUserAcc.Balance -= int64(transferReq.Amount)
 
 	return writeJSON(w, http.StatusOK, map[string]string{
 		"user found": acc.Email,
@@ -220,7 +241,9 @@ func jwtMiddleware(f http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		_ = claims
+		userEmail := claims["email"].(string)
+
+		r = r.WithContext(context.WithValue(r.Context(), "userEmail", userEmail))
 
 		f(w, r)
 

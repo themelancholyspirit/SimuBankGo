@@ -140,6 +140,25 @@ func (s *postgredb) GetAccountByEmail(email string) (*Account, error) {
 
 }
 
+func (s *postgredb) updateAccountBalance(accountEmail string, newBalance int64) error {
+	stmt, err := s.db.Prepare("UPDATE account SET balance = ? WHERE email = ?")
+
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.Exec(newBalance, accountEmail)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
 func scanAccount(rows *sql.Rows) (*Account, error) {
 	acc := new(Account)
 

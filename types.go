@@ -55,6 +55,10 @@ func (a *Account) IsValidPassword(pw string) bool {
 }
 
 type TransferMoneyRequest struct {
-	From string `json:"from"`
-	To   string `json:"to"`
+	To     string `json:"to"`
+	Amount int    `json:"amount"`
+}
+
+type UnauthorizedResponse struct {
+	Error string `json:"error"`
 }
