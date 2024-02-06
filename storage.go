@@ -15,6 +15,7 @@ type Storage interface {
 	GetAccounts() ([]*Account, error)
 	GetAccountByID(int) (*Account, error)
 	GetAccountByEmail(string) (*Account, error)
+	UpdateAccountBalance(string, int64) error
 }
 
 type postgredb struct {
@@ -93,6 +94,8 @@ func (s *postgredb) UpdateAccount(account *Account) error {
 func (s *postgredb) GetAccounts() ([]*Account, error) {
 	rows, err := s.db.Query("select * from account")
 
+	s.db.Begin()
+
 	if err != nil {
 		return nil, err
 	}
@@ -140,8 +143,8 @@ func (s *postgredb) GetAccountByEmail(email string) (*Account, error) {
 
 }
 
-func (s *postgredb) updateAccountBalance(accountEmail string, newBalance int64) error {
-	stmt, err := s.db.Prepare("UPDATE account SET balance = ? WHERE email = ?")
+func (s *postgredb) UpdateAccountBalance(userEmail string, newBalance int64) error {
+	stmt, err := s.db.Prepare("UPDATE account SET balance = $1 WHERE email = $2")
 
 	if err != nil {
 		return err
@@ -149,7 +152,7 @@ func (s *postgredb) updateAccountBalance(accountEmail string, newBalance int64) 
 
 	defer stmt.Close()
 
-	_, err = stmt.Exec(newBalance, accountEmail)
+	_, err = stmt.Exec(newBalance, userEmail)
 
 	if err != nil {
 		return err

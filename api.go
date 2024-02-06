@@ -29,9 +29,19 @@ func (s *APIServer) Run() {
 	router.HandleFunc("/account", makeHTTPHandler(s.handleAccount))
 	router.HandleFunc("/account/{id}", jwtMiddleware(makeHTTPHandler(s.handleAccountById)))
 	router.HandleFunc("/login", makeHTTPHandler(s.handleLogin))
-	router.HandleFunc("/transfer", makeHTTPHandler(s.handleTransfer))
+	router.HandleFunc("/transfer", jwtMiddleware(makeHTTPHandler(s.handleTransfer)))
+	router.HandleFunc("/test", jwtMiddleware(makeHTTPHandler(s.handleTestEndpoint)))
 
 	http.ListenAndServe(s.listenAddr, router)
+}
+
+func (s *APIServer) handleTestEndpoint(w http.ResponseWriter, r *http.Request) error {
+	signedInUserEmail := r.Context().Value("userEmail").(string)
+
+	return writeJSON(w, http.StatusOK, map[string]string{
+		"email": signedInUserEmail,
+	})
+
 }
 
 func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error {
@@ -51,7 +61,14 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 		return fmt.Errorf("Invalid email provided.")
 	}
 
-	acc, err := s.store.GetAccountByEmail(transferReq.To)
+	transfereeAccount, err := s.store.GetAccountByEmail(transferReq.To)
+
+	if err != nil {
+		return writeJSON(w, http.StatusBadRequest, map[string]string{
+			"message": "the user you are trying to donate money to does not exist",
+		})
+	}
+
 	currentUserEmail, ok := r.Context().Value("userEmail").(string)
 
 	if !ok {
@@ -60,7 +77,7 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 		})
 	}
 
-	currUserAcc, err := s.store.GetAccountByEmail(currentUserEmail)
+	transfererAccount, err := s.store.GetAccountByEmail(currentUserEmail)
 
 	if err != nil {
 		return writeJSON(w, http.StatusUnauthorized, UnauthorizedResponse{Error: err.Error()})
@@ -70,15 +87,23 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 		return fmt.Errorf("User with email: %s does not exist", transferReq.To)
 	}
 
-	if currUserAcc.Balance < int64(transferReq.Amount) {
-		return fmt.Errorf("insufficient funds: your current balance is %d", currUserAcc.Balance)
+	if transfererAccount.Balance < int64(transferReq.Amount) {
+		return fmt.Errorf("insufficient funds: your current balance is %d", transfererAccount.Balance)
 	}
 
-	acc.Balance += int64(transferReq.Amount)
-	currUserAcc.Balance -= int64(transferReq.Amount)
+	transfereeNewBalance := transfereeAccount.Balance + int64(transferReq.Amount)
+	transfererNewBalance := transfererAccount.Balance - int64(transferReq.Amount)
+
+	if err := s.store.UpdateAccountBalance(transfererAccount.Email, transfererNewBalance); err != nil {
+		fmt.Println(err)
+	}
+
+	if err := s.store.UpdateAccountBalance(transfereeAccount.Email, transfereeNewBalance); err != nil {
+		fmt.Println(err)
+	}
 
 	return writeJSON(w, http.StatusOK, map[string]string{
-		"user found": acc.Email,
+		"message": "money has been transferred successfully",
 	})
 
 }

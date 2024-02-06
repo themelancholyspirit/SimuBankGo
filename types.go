@@ -28,6 +28,7 @@ func CreateNewAccount(firstName string, lastName string, email string, password 
 		LastName:          lastName,
 		Email:             email,
 		EncryptedPassword: string(EncryptedPassword),
+		Balance:           1000,
 		CreatedAt:         time.Now().UTC(),
 	}, nil
 
@@ -50,10 +51,6 @@ type LoginResponse struct {
 	Email string `json:"email"`
 }
 
-func (a *Account) IsValidPassword(pw string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(a.EncryptedPassword), []byte(pw)) == nil
-}
-
 type TransferMoneyRequest struct {
 	To     string `json:"to"`
 	Amount int    `json:"amount"`
@@ -61,4 +58,8 @@ type TransferMoneyRequest struct {
 
 type UnauthorizedResponse struct {
 	Error string `json:"error"`
+}
+
+func (a *Account) IsValidPassword(pw string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(a.EncryptedPassword), []byte(pw)) == nil
 }
