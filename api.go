@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -33,12 +34,11 @@ func (s *APIServer) Run() {
 	router.HandleFunc("/login", makeHTTPHandler(s.handleLogin))
 	router.HandleFunc("/transfer", jwtMiddleware(makeHTTPHandler(s.handleTransfer)))
 	router.HandleFunc("/test", jwtMiddleware(makeHTTPHandler(s.handleTestEndpoint)))
+
 	router.HandleFunc("/", makeHTTPHandler(func(w http.ResponseWriter, r *http.Request) error {
 		w.Write([]byte("Hello this is a test endpoint for the development purposes"))
 		return nil
 	}))
-
-	// router.HandleFunc("/transactionhistory")
 
 	http.ListenAndServe(s.listenAddr, router)
 }
@@ -110,42 +110,15 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 		fmt.Println(err)
 	}
 
+	transactionHistoryDatabase.addTransaction(currentUserEmail, &TransactionHistory{
+		From:                 currentUserEmail,
+		TransferMoneyRequest: *transferReq,
+		TransactionMadeAt:    time.Now().UTC(),
+	})
+
 	return writeJSON(w, http.StatusOK, map[string]string{
 		"message": "money has been transferred successfully",
 	})
-
-}
-
-func (s *APIServer) handleTransactionHistory(w http.ResponseWriter, r *http.Request) error {
-
-	signedInUserEmail := r.Context().Value("userEmail").(string)
-
-	if r.Method == "POST" {
-
-		var transactionReq *TransactionHistoryRequest
-
-		if err := json.NewDecoder(r.Body).Decode(transactionReq); err != nil {
-			return writeJSON(w, http.StatusBadRequest, apiError{
-				Error: err.Error(),
-			})
-		}
-
-		defer r.Body.Close()
-
-		transactionResponse := TransactionHistoryResponse{
-			TransactionHistoryRequest: *transactionReq,
-		}
-
-		transactionHistoryDatabase.addTransaction(signedInUserEmail, &transactionResponse)
-
-		return writeJSON(w, http.StatusCreated, transactionResponse)
-	}
-
-	if r.Method == "GET" {
-		return transactionHistoryDatabase.DisplayTransactionsByUser(signedInUserEmail, w)
-	}
-
-	return fmt.Errorf("Method: %s not available", r.Method)
 
 }
 

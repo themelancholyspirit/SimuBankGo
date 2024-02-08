@@ -63,32 +63,27 @@ type UnauthorizedResponse struct {
 	Error string `json:"error"`
 }
 
-type TransactionHistoryRequest struct {
-	From              string    `json:"from"`
-	To                string    `json:"to"`
-	Amount            int       `json:"amount"`
+type TransactionHistory struct {
+	From string `json:"from"`
+	TransferMoneyRequest
 	TransactionMadeAt time.Time `json:"transcationmadeat"`
 }
 
-type TransactionHistoryResponse struct {
-	TransactionHistoryRequest
-}
-
 type TransactionHistoryDatabase struct {
-	db map[string][]*TransactionHistoryResponse
+	db map[string][]*TransactionHistory
 }
 
 func CreateNewTransactionHistoryDatabase() *TransactionHistoryDatabase {
 	return &TransactionHistoryDatabase{
-		db: make(map[string][]*TransactionHistoryResponse),
+		db: make(map[string][]*TransactionHistory),
 	}
 }
 
-func (s *TransactionHistoryDatabase) addTransaction(userEmail string, transactionHistory *TransactionHistoryResponse) error {
+func (s *TransactionHistoryDatabase) addTransaction(userEmail string, transactionHistory *TransactionHistory) error {
 	transactionHistoryArray, ok := s.db["userEmail"]
 
 	if !ok {
-		newTransactionHistoryArray := []*TransactionHistoryResponse{}
+		newTransactionHistoryArray := []*TransactionHistory{}
 
 		newTransactionHistoryArray = append(newTransactionHistoryArray, transactionHistory)
 
