@@ -31,6 +31,7 @@ func (s *APIServer) Run() {
 	router.HandleFunc("/login", makeHTTPHandler(s.handleLogin))
 	router.HandleFunc("/transfer", jwtMiddleware(makeHTTPHandler(s.handleTransfer)))
 	router.HandleFunc("/test", jwtMiddleware(makeHTTPHandler(s.handleTestEndpoint)))
+	// router.HandleFunc("/transactionhistory")
 
 	http.ListenAndServe(s.listenAddr, router)
 }
@@ -105,6 +106,25 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 	return writeJSON(w, http.StatusOK, map[string]string{
 		"message": "money has been transferred successfully",
 	})
+
+}
+
+func (s *APIServer) handleTransactionHistory(w http.ResponseWriter, r *http.Request) error {
+	if r.Method != "POST" {
+		return fmt.Errorf("Method: %s not available", r.Method)
+	}
+
+	var transactionReq *TransactionHistoryRequest
+
+	if err := json.NewDecoder(r.Body).Decode(transactionReq); err != nil {
+		return writeJSON(w, http.StatusBadRequest, apiError{
+			Error: err.Error(),
+		})
+	}
+
+	defer r.Body.Close()
+
+	return nil
 
 }
 
@@ -234,6 +254,7 @@ func (s *APIServer) handleDeleteAccountById(w http.ResponseWriter, r *http.Reque
 	id, err := intoInt(r)
 
 	if err != nil {
+
 		return err
 	}
 
