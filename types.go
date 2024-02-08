@@ -115,6 +115,13 @@ func (s *TransactionHistoryDatabase) DisplayTransactionsByUser(userEmail string,
 
 }
 
+type TransactionHistoryRequest struct {
+	From              string    `json:"from"`
+	To                string    `json:"to"`
+	Amount            int       `json:"amount"`
+	TransactionMadeAt time.Time `json:"transcationmadeat"`
+}
+
 func (a *Account) IsValidPassword(pw string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(a.EncryptedPassword), []byte(pw)) == nil
 }
