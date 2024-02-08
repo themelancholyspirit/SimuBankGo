@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -65,6 +68,55 @@ type TransactionHistoryRequest struct {
 	To                string    `json:"to"`
 	Amount            int       `json:"amount"`
 	TransactionMadeAt time.Time `json:"transcationmadeat"`
+}
+
+type TransactionHistoryResponse struct {
+	TransactionHistoryRequest
+}
+
+type TransactionHistoryDatabase struct {
+	db map[string][]*TransactionHistoryResponse
+}
+
+func CreateNewTransactionHistoryDatabase() *TransactionHistoryDatabase {
+	return &TransactionHistoryDatabase{
+		db: make(map[string][]*TransactionHistoryResponse),
+	}
+}
+
+func (s *TransactionHistoryDatabase) addTransaction(userEmail string, transactionHistory *TransactionHistoryResponse) error {
+	transactionHistoryArray, ok := s.db["userEmail"]
+
+	if !ok {
+		newTransactionHistoryArray := []*TransactionHistoryResponse{}
+
+		newTransactionHistoryArray = append(newTransactionHistoryArray, transactionHistory)
+
+		s.db[userEmail] = newTransactionHistoryArray
+
+		return nil
+	}
+
+	transactionHistoryArray = append(transactionHistoryArray, transactionHistory)
+
+	return nil
+
+}
+
+func (s *TransactionHistoryDatabase) DisplayTransactionsByUser(userEmail string, w http.ResponseWriter) error {
+
+	transactioHistoryArr, ok := s.db[userEmail]
+
+	if !ok {
+		return json.NewEncoder(w).Encode(map[string]string{
+			"message": fmt.Sprintf("user with email: %s does not exist", userEmail),
+		})
+	}
+
+	return json.NewEncoder(w).Encode(transactioHistoryArr)
+
+	// return nil
+
 }
 
 func (a *Account) IsValidPassword(pw string) bool {

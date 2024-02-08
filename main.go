@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/joho/godotenv"
 )
@@ -24,7 +26,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	s := NewAPIServer(":8080", db)
+	port := os.Getenv("PORT")
+
+	fmt.Println("Server is running successfully on port:", port)
+
+	s := NewAPIServer(fmt.Sprintf(":%s", port), db)
 
 	s.Run()
 
