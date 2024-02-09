@@ -35,6 +35,8 @@ func (s *APIServer) Run() {
 	router.HandleFunc("/transfer", jwtMiddleware(makeHTTPHandler(s.handleTransfer)))
 	router.HandleFunc("/test", jwtMiddleware(makeHTTPHandler(s.handleTestEndpoint)))
 
+	router.HandleFunc("/transactions", jwtMiddleware(makeHTTPHandler(s.handleTransactions)))
+
 	router.HandleFunc("/", makeHTTPHandler(func(w http.ResponseWriter, r *http.Request) error {
 		w.Write([]byte("Hello this is a test endpoint for the development purposes"))
 		return nil
@@ -49,6 +51,22 @@ func (s *APIServer) handleTestEndpoint(w http.ResponseWriter, r *http.Request) e
 	return writeJSON(w, http.StatusOK, map[string]string{
 		"email": signedInUserEmail,
 	})
+
+}
+
+func (s *APIServer) handleTransactions(w http.ResponseWriter, r *http.Request) error {
+
+	currentUserEmail, ok := r.Context().Value("userEmail").(string)
+
+	if !ok {
+		return fmt.Errorf("not authorized")
+	}
+
+	if r.Method == "GET" {
+		return transactionHistoryDatabase.DisplayTransactionsByUser(currentUserEmail, w)
+	}
+
+	return fmt.Errorf("Method: %s not supported", r.Method)
 
 }
 

@@ -80,7 +80,7 @@ func CreateNewTransactionHistoryDatabase() *TransactionHistoryDatabase {
 }
 
 func (s *TransactionHistoryDatabase) addTransaction(userEmail string, transactionHistory *TransactionHistory) error {
-	transactionHistoryArray, ok := s.db["userEmail"]
+	transactionHistoryArray, ok := s.db[userEmail]
 
 	if !ok {
 		newTransactionHistoryArray := []*TransactionHistory{}
@@ -94,8 +94,9 @@ func (s *TransactionHistoryDatabase) addTransaction(userEmail string, transactio
 
 	transactionHistoryArray = append(transactionHistoryArray, transactionHistory)
 
-	return nil
+	s.db[userEmail] = transactionHistoryArray
 
+	return nil
 }
 
 func (s *TransactionHistoryDatabase) DisplayTransactionsByUser(userEmail string, w http.ResponseWriter) error {
